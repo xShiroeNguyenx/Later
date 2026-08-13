@@ -74,6 +74,15 @@ if (!process.env.BASE) {
     }
     await new Promise((r) => setTimeout(r, 250))
   }
+
+  // Pull the page and its bundle through once before measuring anything. The
+  // first request to a just-started server pays for its cold start, and the FCP
+  // assertion below is a budget for what the *page* costs — not for how long a
+  // preview server takes to wake up. The byte budget is enforced separately by
+  // `npm run size`, so nothing is being quietly excused here.
+  const warm = await (await fetch(BASE)).text()
+  const bundle = warm.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/)?.[1]
+  if (bundle) await (await fetch(new URL(bundle, BASE))).text()
 }
 
 const shutdown = () => { if (server && !server.killed) server.kill() }

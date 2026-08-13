@@ -14,9 +14,9 @@ thing: **overthinking → rest**.
 No account, no database, no notifications, no analytics. Works offline. Installs
 to the home screen. English and Vietnamese.
 
-**Live:** [xshiroenguyenx.github.io/Later](https://xshiroenguyenx.github.io/Later/)
-— published on every push to `main`. Add it to your home screen and it opens like
-a native app, offline.
+**Live:** [later.techdecoded.net](https://later.techdecoded.net/) — published on
+every push to `main`. Add it to your home screen and it opens like a native app,
+offline.
 
 | | |
 |---|---|
@@ -71,7 +71,7 @@ locked phone. That is the first item in [docs/RELEASE.md](docs/RELEASE.md).
 Someone reaching for this at 2:17 AM should not watch a spinner.
 
 - `index.html` carries a **static shell** — the moon, the wording, the Rest
-  button, and every style the app owns, inline. It paints in ~200 ms with no
+  button, and every style the app owns, inline. It paints in 90–215 ms with no
   stylesheet request and no flash of unstyled text.
 - A small inline script fills in the clock and the returning-user wording, and
   **starts the audio if Rest is tapped before the bundle arrives**. Autoplay
@@ -245,13 +245,38 @@ that is set, the workflow builds and passes but has nowhere to deliver to. Pages
 a private repository needs GitHub Pro; alternatives are noted in
 [docs/RELEASE.md](docs/RELEASE.md).
 
-A project site is served from `/<repo>/`, not the root, so the workflow works out
-the prefix and passes it as `BASE_PATH`. Every asset URL is built from it:
-`%BASE_URL%` in `index.html`, `import.meta.env.BASE_URL` in
-`src/audio/layers.ts`, and the generated web manifest. `scripts/check-base.mjs`
-then greps the real build output for anything root-absolute that slipped through —
-that class of bug 404s only on Pages and looks perfect locally, so it is worth a
-CI step of its own.
+### Where the site is served from
+
+This is the one thing that has actually broken in production, so it is worth
+understanding.
+
+A GitHub Pages project site lives at `/<repo>/`; a user site or **any custom
+domain** lives at the root. The workflow decides between them:
+
+| | base |
+|---|---|
+| `public/CNAME` exists | `/` — a custom domain always serves from the root |
+| repository is `<owner>.github.io` | `/` |
+| anything else | `/<repo>/` |
+
+Every asset URL is built from that prefix: `%BASE_URL%` in `index.html`,
+`import.meta.env.BASE_URL` in `src/audio/layers.ts`, and the generated web
+manifest. **If you add a custom domain, add it to `public/CNAME`** — otherwise the
+build assumes `/Later/` and every asset 404s.
+
+Two checks guard it, and they are not redundant:
+
+- `scripts/check-base.mjs` greps the real build output for anything root-absolute
+  that slipped through. It proves the build is *internally consistent* with the
+  base it was handed.
+- `scripts/smoke.mjs` fetches the **deployed** site and confirms the bundle,
+  manifest, icon and audio all resolve. It proves that base was the *right* one.
+
+Only the second can catch a base/host mismatch, and the failure it catches is a
+nasty one: `index.html` returns 200 and every asset 404s, so the page paints
+perfectly — all its CSS is inline — and then does nothing at all. The bundle never
+loads, React never mounts, and the static shell stays up with a settings line that
+is a `<span>` rather than a button. It looks like a working app that ignores you.
 
 To build for a subpath by hand:
 
@@ -296,7 +321,9 @@ scripts/
   gen-audio.mjs       synthesises the three beds and two thunder one-shots
   gen-icons.mjs       PNG encoder + crescent artwork
   size.mjs            bundle budget check
-  check-base.mjs      catches root-absolute paths that would 404 on Pages
+  check-base.mjs      proves a build is consistent with the base it was given
+  smoke.mjs           asks the deployed site whether that base was the right one
+  changelog-section.mjs  release notes, straight from CHANGELOG.md
 tests/
   e2e.mjs             80 checks against a real build in a real browser
 src/

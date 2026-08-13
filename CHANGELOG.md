@@ -61,14 +61,24 @@ that is confirmed on a real iPhone, calling this 1.0 would be overpromising.
   hand-rolled PNG writer produces the icons, so there is no licence to track and
   no image dependency in the toolchain.
 - **App JavaScript is 16.9 kB gzip** against a 60 kB budget that CI enforces;
-  `index.html` alone is 4.9 kB and enough to paint. First contentful paint
-  measures 190–215 ms across runs, against a 400 ms budget the suite asserts.
+  `index.html` alone is 4.9 kB and enough to paint. First contentful paint measures
+  90–215 ms across runs, against the 400 ms budget the suite asserts.
 - **80 end-to-end checks** in `tests/e2e.mjs`, run in CI against a real build in a
   real browser — including the ending under iOS's read-only `volume`, offline
   playback, the night rule, and both languages.
 - CI publishes to GitHub Pages on every push to `main`, and turns a pushed tag
   into a GitHub release with notes taken from this file. It refuses to release if
   the tag disagrees with `package.json` or the version has no entry here.
+- **A post-deploy smoke test** (`scripts/smoke.mjs`) fetches the live site and
+  checks that the bundle, manifest, icon and audio the page points at all actually
+  resolve. This is not belt-and-braces: the base path a build is given has to match
+  where the site really ends up being served, and when it does not, `index.html`
+  returns 200 while every asset 404s. The page then paints perfectly — all of its
+  CSS is inline — and does nothing whatsoever, because the bundle never loads and
+  the static shell has no working settings button. No build-time check can see
+  that; only asking the deployed URL can.
+- The base path is derived from `public/CNAME` when present, because a custom
+  domain always serves from the root no matter what the repository is called.
 - Source is ordinary React + TypeScript, aliased to `preact/compat` at build time.
 
 ### Known limitations

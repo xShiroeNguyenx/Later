@@ -33,16 +33,26 @@ jobs:
           # FFMPEG_BIN at any existing file skips the download entirely.
           FFMPEG_BIN: /bin/true
 
-      # A project site lives at /<repo>/; a user or org site lives at the root.
-      # Everything asset-shaped in the app is built from this prefix.
+      # Where the site is actually served from. Getting this wrong 404s every
+      # asset while index.html still loads, so the app looks fine and does
+      # nothing — the static shell has no working settings button.
+      #
+      #   public/CNAME present  → a custom domain, served from the root
+      #   <owner>.github.io     → a user or org site, served from the root
+      #   anything else         → a project site, served from /<repo>/
       - name: Work out the base path
         id: base
         run: |
           repo='${{ github.event.repository.name }}'
           owner='${{ github.repository_owner }}'
-          if [ "$repo" = "$owner.github.io" ]; then
+          if [ -s public/CNAME ]; then
+            echo "Custom domain $(tr -d '[:space:]' < public/CNAME) — serving from the root"
+            echo "path=/" >> "$GITHUB_OUTPUT"
+          elif [ "$repo" = "$owner.github.io" ]; then
+            echo "User or org site — serving from the root"
             echo "path=/" >> "$GITHUB_OUTPUT"
           else
+            echo "Project site — serving from /$repo/"
             echo "path=/$repo/" >> "$GITHUB_OUTPUT"
           fi
 
@@ -131,9 +141,44 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  # Asks the live site whether the things index.html points at actually resolve.
+  #
+  # check-base verifies a build against the base it was handed; it cannot know
+  # whether that base matches where the site is really served. When those two
+  # disagree, index.html returns 200 and every asset 404s — the page paints
+  # perfectly, since its CSS is inline, and then does nothing at all. This is the
+  # only check that would notice.
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Work out the deployed URL
+        id: url
+        run: |
+          url='${{ needs.deploy.outputs.url }}'
+          if [ -z "$url" ] && [ -s public/CNAME ]; then
+            url="https://$(tr -d '[:space:]' < public/CNAME)/"
+          fi
+          if [ -z "$url" ]; then
+            echo 'No deployed URL to check against.' >&2
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # No dependencies needed — the script uses only Node built-ins.
+      - run: node scripts/smoke.mjs "${{ steps.url.outputs.url }}"
 
   # Turns a pushed tag into an actual GitHub release. Gated on build and e2e, so a
   # tag that does not pass its own checks never becomes a release.

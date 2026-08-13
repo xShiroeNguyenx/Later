@@ -1,14 +1,23 @@
 # Cutting a release
 
-## One thing to do by hand, once
+## Things to do by hand, once
 
-Publishing has to be switched on in the repository:
-**Settings → Pages → Source → GitHub Actions**.
+**Switch publishing on:** Settings → Pages → Source → **GitHub Actions**. Until
+that is done the workflow builds and passes but has nowhere to deliver to.
 
-Until that is done the workflow builds and passes but has nowhere to deliver to.
-Afterwards, every push to `main` lands at
-<https://xshiroenguyenx.github.io/Later/>. The workflow works out on its own that
-the site lives at `/Later/` rather than the root.
+**If you use a custom domain, put it in two places** — Settings → Pages → Custom
+domain, *and* `public/CNAME`. The second is not decoration: the build derives its
+base path from it, because a custom domain serves from the root while a project
+site serves from `/<repo>/`.
+
+Getting that wrong is the failure this project has actually shipped. `index.html`
+returns 200 and every asset 404s, so the page paints perfectly — all its CSS is
+inline — and then does nothing at all: no bundle, no React, and a static shell
+whose settings line is a `<span>` rather than a button. It reads as a working app
+that ignores every tap. `scripts/smoke.mjs` runs after each deploy specifically to
+catch it.
+
+The site currently publishes to <https://later.techdecoded.net/>.
 
 > GitHub Pages on a **private** repository needs GitHub Pro or above. On a free
 > plan either keep the repository public, or deploy the same `dist/` to Cloudflare
