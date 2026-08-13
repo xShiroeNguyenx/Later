@@ -8,21 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Only the deploy job gets to write anywhere; see its own block below.
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-# A newer push should win, but never interrupt a deploy that is already writing.
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
-env:
-  # ffmpeg-static's postinstall downloads a ~30 MB binary. Only `npm run audio`
-  # needs it and the assets are committed, so point FFMPEG_BIN at any existing
-  # file and the install step skips the download entirely.
-  FFMPEG_BIN: /bin/true
 
 jobs:
   build:
@@ -36,6 +24,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+        env:
+          # ffmpeg-static's postinstall downloads a ~30 MB binary. Only
+          # `npm run audio` needs it and the assets are committed, so pointing
+          # FFMPEG_BIN at any existing file skips the download entirely.
+          FFMPEG_BIN: /bin/true
 
       # A project site lives at /<repo>/; a user or org site lives at the root.
       # Everything asset-shaped in the app is built from this prefix.
@@ -63,17 +56,71 @@ jobs:
       - name: Verify the build is base-correct
         env:
           BASE_PATH: ${{ steps.base.outputs.path }}
-        run: node scripts/check-base.mjs "$BASE_PATH"
+        run: npm run check-base
 
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
           path: dist
 
+  # 80 checks in a real browser against a real build. Runs in parallel with the
+  # build to keep the wall clock down, but the deploy waits for it — this is the
+  # job that caught the service worker never caching the audio, which is exactly
+  # the kind of thing that should never reach anyone's phone.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+        env:
+          FFMPEG_BIN: /bin/true
+
+      # Cache the browser itself — it is ~130 MB and never changes between runs.
+      - name: Work out the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # Built at the root here: the suite navigates to "/", and the base path only
+      # matters for what actually gets published.
+      - run: npm run build
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   deploy:
-    needs: build
+    needs: [build, e2e]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # A newer push should win, but never interrupt a deploy that is already
+    # writing. Scoped to this job so pull-request checks don't queue behind it.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

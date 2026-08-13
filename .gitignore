@@ -6,3 +6,4 @@ dist-ssr/
 .vite/
 .vscode/*
 !.vscode/extensions.json
+test-results/

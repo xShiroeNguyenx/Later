@@ -1,5 +1,8 @@
 # Later.
 
+[![Deploy](https://github.com/xShiroeNguyenx/Later/actions/workflows/deploy.yml/badge.svg)](https://github.com/xShiroeNguyenx/Later/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > You don't have to solve everything tonight.
 
 A tiny web app for nights when your mind won't stop. Open it, tap one button, and
@@ -9,7 +12,18 @@ Not a sleep tracker. Not a meditation library. Not a music player. It does one
 thing: **overthinking → rest**.
 
 No account, no database, no notifications, no analytics. Works offline. Installs
-to the home screen.
+to the home screen. English and Vietnamese.
+
+**Live:** [xshiroenguyenx.github.io/Later](https://xshiroenguyenx.github.io/Later/)
+— published on every push to `main`. Add it to your home screen and it opens like
+a native app, offline.
+
+| | |
+|---|---|
+| ![Home](docs/screen-home.png) | ![A session](docs/screen-session.png) |
+| **Nothing to decide.** The time, one line, one button. | **4 seconds in, 6 out.** No progress bar — it fades away on its own after twelve seconds. |
+| ![Parking a thought](docs/screen-park.png) | ![Settings](docs/screen-picker.png) |
+| **Park a thought** so your brain stops rehearsing it. Never read back to you at night. | **Every choice on one screen**, applied on tap. No steps, no confirm. |
 
 ---
 
@@ -24,33 +38,29 @@ npm run dev -- --host      # --host so you can open it on a real phone over LAN
 npm run build              # typecheck + production build into dist/
 npm run preview            # serve dist/ — needed to test the service worker
 npm run size               # bundle budget check
+npm run test:e2e           # 80 end-to-end checks in a real browser
 npm run assets             # regenerate audio + icons (rarely needed)
 ```
 
-Available in **English and Vietnamese**, picked from the browser on a first visit
-and switchable in the one settings sheet.
+Requires Node 20 or newer. `npm run test:e2e` needs a browser once —
+`npx playwright install chromium` — then builds nothing and serves `dist/` itself.
 
----
+### Tests
 
-## Deploying
+[`tests/e2e.mjs`](tests/e2e.mjs) drives a real production build in a real browser:
+the whole flow, both endings, offline playback, the night rule, a tap that lands
+before hydration, reduced motion, and both languages. Two of its checks exist
+specifically to catch bugs that only show up on a phone:
 
-Pushing to `main` builds and publishes to GitHub Pages — see
-[.github/workflows/deploy.yml](.github/workflows/deploy.yml). Enable it once, in
-**Settings → Pages → Source → GitHub Actions**.
+- **`ending/lull`** re-creates iOS Safari's read-only `volume` and asserts the
+  session stops *inside* the lull authored into the loop seam, rather than cutting
+  out mid-downpour.
+- **`offline`** loads, plays, goes offline, reloads, and plays again. This is what
+  caught the service worker never caching the audio at all — a media element asks
+  for byte ranges and a 206 response is not cacheable.
 
-A project site is served from `/<repo>/`, not the root, so the workflow works out
-the prefix and passes it as `BASE_PATH`. Every asset URL is built from it:
-`%BASE_URL%` in `index.html`, `import.meta.env.BASE_URL` in
-`src/audio/layers.ts`, and the generated web manifest. `scripts/check-base.mjs`
-then greps the real build output for anything root-absolute that slipped through —
-that class of bug 404s only on Pages and looks perfect locally, so it is worth a
-CI step of its own.
-
-To build for a subpath by hand:
-
-```bash
-BASE_PATH=/Later/ npm run build && node scripts/check-base.mjs /Later/
-```
+What no browser on a desktop can check is whether audio really keeps playing on a
+locked phone. That is the first item in [docs/RELEASE.md](docs/RELEASE.md).
 
 ---
 
@@ -63,13 +73,14 @@ Someone reaching for this at 2:17 AM should not watch a spinner.
 - `index.html` carries a **static shell** — the moon, the wording, the Rest
   button, and every style the app owns, inline. It paints in ~200 ms with no
   stylesheet request and no flash of unstyled text.
-- A ~40-line inline script fills in the clock and the returning-user wording, and
+- A small inline script fills in the clock and the returning-user wording, and
   **starts the audio if Rest is tapped before the bundle arrives**. Autoplay
   permission only exists inside the gesture that caused it, so waiting for
   JavaScript would mean tapping into silence.
 - The app then hydrates into identical markup and removes the shell. Nothing
   moves.
-- App JavaScript is **~15 kB gzip** (budget: 60 kB, enforced by `npm run size`).
+- App JavaScript is **16.9 kB gzip** (budget: 60 kB, enforced in CI by
+  `npm run size`). `index.html` alone is 4.9 kB and is enough to paint.
 
 ### Two audio layers, because only one survives a locked screen
 
@@ -93,6 +104,8 @@ the user agent.
 
 ### Two languages, no flash
 
+<img src="docs/screen-home-vi.png" alt="Home in Vietnamese" width="270" align="right" />
+
 The static shell ships both languages as sibling spans, and a script in `<head>`
 sets `html[lang]` before the body is parsed — CSS then hides the pair that is not
 wanted. So a Vietnamese reader never sees a frame of English. Doing the swap after
@@ -105,7 +118,9 @@ app. Vietnamese also gets a 24-hour clock, because that is how the time is
 actually read there.
 
 The session timeline stores cue **keys**, not sentences, so both languages are
-paced identically and adding a third is a table entry rather than a code change.
+paced identically.
+
+<br clear="right" />
 
 ### The clock never counts ticks
 
@@ -129,7 +144,7 @@ steady state, so tail joins head exactly.
 Icons are generated the same way, by a hand-rolled PNG writer, so the toolchain
 has no image dependency.
 
-Audio is deliberately **not** precached — a first visit costs ~19 kB, not a
+Audio is deliberately **not** precached — a first visit costs ~21 kB, not a
 megabyte. The beds land in the cache the first time they play, pulled through a
 plain `fetch()` because a media element's range request returns a 206 that no
 cache will accept.
@@ -161,18 +176,124 @@ one product decision most likely to get argued away later; it shouldn't be.
 
 ---
 
+## Privacy
+
+Everything stays on the device, and that is a checkable claim rather than a
+promise:
+
+- There is no account, no server, no database, no analytics, and no cookies.
+- The only network requests the app ever makes are for its own files — HTML, one
+  JavaScript bundle, the audio, the icons — all served as static files.
+- Parked thoughts live in `localStorage` under `later.thoughts.v1` and are never
+  transmitted anywhere. So do your settings, under `later.prefs.v1`.
+- Clearing site data for the page erases them. Nothing else has a copy, including
+  you — there is no export yet.
+
+The flip side of that last point: parked thoughts are not backed up and do not
+sync between devices.
+
+---
+
+## Browser support
+
+| | Install to home screen | Plays with screen locked | Software fade | Texture layer in background |
+|---|---|---|---|---|
+| iOS Safari 15+ | yes | by design — **unverified on device** | no; the seam lull covers it | no (`AudioContext` suspends) |
+| Chrome / Android | yes | by design — **unverified on device** | yes | yes |
+| Chrome, Edge desktop | — | n/a | yes | yes |
+| Firefox | yes | yes | yes | yes |
+| Safari, macOS | — | n/a | yes | yes |
+
+Requires AAC-in-MP4 playback (universal since ~2013) and the Web Audio API for
+the texture layer. Without Media Session there are no lock-screen controls;
+everything else still works.
+
+### Known limitations
+
+1. **Lock-screen playback has not been confirmed on a physical phone.** The
+   architecture exists for it and passes everything a desktop browser can check —
+   including a run with iOS's `volume` restriction emulated, where the ending
+   correctly landed at 46.4 s, inside the authored lull. But the behaviour itself
+   is still an expectation. It is the first item in
+   [docs/RELEASE.md](docs/RELEASE.md), and it gates 1.0.
+2. **On iOS a timer ends within ±24 s of the requested time**, because it waits for
+   the next lull rather than cutting out mid-downpour. Fine for a sleep timer,
+   but it is not exact.
+3. **The texture layer stops when iOS backgrounds the app.** By design — the bed
+   carries on alone, and the loop point is only really noticeable when you are
+   awake and looking at the screen anyway.
+4. **The 48-second loop has been measured, not judged by ear** over a long
+   session. The seam discontinuity is 1.13× a normal sample-to-sample step, i.e.
+   no step at all, and the level either side matches within 1 dB.
+5. **Empty Mind is silent, so the page can be suspended** in the background. The
+   timeline catches up from timestamps when you return, but the closing line may
+   not appear at the exact second.
+6. **No export, no sync, no backup** for parked thoughts. See Privacy above.
+
+---
+
+## Deploying
+
+Pushing to `main` builds and publishes to GitHub Pages — see
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml). Enable it once, in
+**Settings → Pages → Source → GitHub Actions**. Pages on a private repository
+needs GitHub Pro; the alternatives are noted in
+[docs/RELEASE.md](docs/RELEASE.md).
+
+A project site is served from `/<repo>/`, not the root, so the workflow works out
+the prefix and passes it as `BASE_PATH`. Every asset URL is built from it:
+`%BASE_URL%` in `index.html`, `import.meta.env.BASE_URL` in
+`src/audio/layers.ts`, and the generated web manifest. `scripts/check-base.mjs`
+then greps the real build output for anything root-absolute that slipped through —
+that class of bug 404s only on Pages and looks perfect locally, so it is worth a
+CI step of its own.
+
+To build for a subpath by hand:
+
+```bash
+BASE_PATH=/Later/ npm run build && BASE_PATH=/Later/ npm run check-base
+```
+
+On Git Bash for Windows, MSYS rewrites `/Later/` into a Windows path — use
+PowerShell: `$env:BASE_PATH='/Later/'; npm run build; npm run check-base`.
+
+---
+
+## Adding a language
+
+Most of it is one table entry:
+
+1. Add the code to `Lang` in `src/i18n.ts` and an entry to `LANGS`.
+2. Copy the `en` object in the same file and translate it. TypeScript will tell
+   you if you miss a key, including the cue lines.
+3. If the clock reads differently, add a branch to `formatClock` in
+   `src/lib/clock.ts` — and mirror it in the inline script in `index.html`, which
+   has the same two rules and a comment saying so.
+4. Add the shell strings to `index.html`: the lede, the Rest label, the default
+   summary, and the two returning-visitor lines in the body script.
+
+One honest caveat: the shell's hide-the-other-language CSS rule is written for
+exactly two languages. A third needs that selector reworked — a few lines, but not
+zero.
+
+---
+
 ## Layout
 
 ```
 index.html            static shell + the entire design system, inline
 .github/workflows/
   deploy.yml          build, budget check, base check, publish to Pages
+docs/
+  RELEASE.md          release checklist, including the device tests that gate it
 scripts/
   dsp.mjs             filters, noise, the seamless-loop trick, WAV writer
   gen-audio.mjs       synthesises the three beds and two thunder one-shots
   gen-icons.mjs       PNG encoder + crescent artwork
   size.mjs            bundle budget check
   check-base.mjs      catches root-absolute paths that would 404 on Pages
+tests/
+  e2e.mjs             80 checks against a real build in a real browser
 src/
   i18n.ts             every string, in English and Vietnamese
   audio/              engine (two layers), procedural texture, MediaSession
@@ -187,6 +308,9 @@ Source is written as ordinary React + TypeScript; `react` is aliased to
 ~11 kB gzip. See the comment at the top of `vite.config.ts` to go back to real
 React — no source file changes needed.
 
+`PLAN.md` is the original plan, kept alongside a log of every place the build
+ended up differing from it and why.
+
 ---
 
 ## Not in scope
@@ -194,3 +318,11 @@ React — no source file changes needed.
 An AI companion (worth building once real people use this — and its job would be
 to help set a thought down, never to solve it), accounts, sync, sleep tracking,
 statistics, reminders.
+
+---
+
+## License
+
+[MIT](LICENSE). The audio and icons are generated by the scripts in this
+repository rather than sourced from anywhere, so they carry no separate
+attribution requirement.

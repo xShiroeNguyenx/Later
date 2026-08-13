@@ -2,13 +2,18 @@
 
 > *You don't have to solve everything tonight.*
 
-**Status:** MVP đã build xong, có tiếng Việt, có CI deploy lên GitHub Pages.
-80/80 automated check pass trên Chromium.
-**Còn lại:** kiểm tra trên iPhone + Android thật với màn hình khoá — xem mục 11.
+**Status:** sẵn sàng release **v0.1.0**. MVP xong, có tiếng Việt, có CI deploy lên
+GitHub Pages, 80/80 automated check pass trên Chromium.
+**Chặn 1.0:** chưa kiểm trên iPhone/Android thật với màn hình khoá — xem mục 11 và
+[docs/RELEASE.md](docs/RELEASE.md).
 **Last updated:** 2026-08-13
 
-> Kế hoạch gốc giữ nguyên bên dưới để đối chiếu. Những chỗ thực tế làm khác được
-> ghi ở **mục 13 — Nhật ký thi công**, phần tiếng Việt ở **mục 14**, phần CI ở
+> Tài liệu khác: [README.md](README.md) cho người dùng và người đọc code,
+> [CHANGELOG.md](CHANGELOG.md) cho từng version,
+> [docs/RELEASE.md](docs/RELEASE.md) cho các bước cắt release.
+>
+> File này là kế hoạch gốc, giữ nguyên để đối chiếu. Những chỗ thực tế làm khác
+> được ghi ở **mục 13 — Nhật ký thi công**, phần tiếng Việt ở **mục 14**, phần CI ở
 > **mục 15**.
 
 ---
@@ -431,7 +436,8 @@ cơ chế fade cho iOS còn nguyên.
 ### Chưa làm được ở đây — bắt buộc phải test trên máy thật
 
 Không có test tự động nào thay được, vì Chromium desktop không có audio session
-của iOS/Android:
+của iOS/Android. Checklist dạng tick-box ở [docs/RELEASE.md](docs/RELEASE.md);
+kết quả tìm được thì ghi lại vào đây.
 
 1. **Khoá màn hình 10 phút** — iPhone Safari + Chrome Android. Bấm Rest → khoá
    máy → sau 10 phút audio vẫn phát, lock screen hiện "Later. · Rain · 20 min",

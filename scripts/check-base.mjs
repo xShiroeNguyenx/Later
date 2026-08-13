@@ -6,14 +6,18 @@
  * silently 404s there and nowhere else. Locally everything looks fine. So this
  * runs in CI against the real build output.
  *
+ *   npm run check-base                 # checks against BASE_PATH, or / by default
  *   node scripts/check-base.mjs /Later/
+ *
+ * Reads BASE_PATH as well as an argument, because Git Bash on Windows rewrites a
+ * bare "/Later/" on the command line into a Windows path.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
-const base = process.argv[2] || '/'
+const base = process.argv[2] || process.env.BASE_PATH || '/'
 
 if (!base.startsWith('/') || !base.endsWith('/')) {
   console.error(`Base must start and end with a slash, got "${base}"`)
