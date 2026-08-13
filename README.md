@@ -234,10 +234,15 @@ everything else still works.
 
 ## Deploying
 
-Pushing to `main` builds and publishes to GitHub Pages — see
-[.github/workflows/deploy.yml](.github/workflows/deploy.yml). Enable it once, in
-**Settings → Pages → Source → GitHub Actions**. Pages on a private repository
-needs GitHub Pro; the alternatives are noted in
+Pushing to `main` builds, checks and publishes to GitHub Pages. Pushing a `v*.*.*`
+tag creates a GitHub release, with notes taken from `CHANGELOG.md` and a zip of the
+built site attached for self-hosting. See
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) and
+[docs/RELEASE.md](docs/RELEASE.md).
+
+Enable publishing once, in **Settings → Pages → Source → GitHub Actions** — until
+that is set, the workflow builds and passes but has nowhere to deliver to. Pages on
+a private repository needs GitHub Pro; alternatives are noted in
 [docs/RELEASE.md](docs/RELEASE.md).
 
 A project site is served from `/<repo>/`, not the root, so the workflow works out

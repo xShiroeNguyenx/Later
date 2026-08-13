@@ -66,6 +66,9 @@ that is confirmed on a real iPhone, calling this 1.0 would be overpromising.
 - **80 end-to-end checks** in `tests/e2e.mjs`, run in CI against a real build in a
   real browser — including the ending under iOS's read-only `volume`, offline
   playback, the night rule, and both languages.
+- CI publishes to GitHub Pages on every push to `main`, and turns a pushed tag
+  into a GitHub release with notes taken from this file. It refuses to release if
+  the tag disagrees with `package.json` or the version has no entry here.
 - Source is ordinary React + TypeScript, aliased to `preact/compat` at build time.
 
 ### Known limitations

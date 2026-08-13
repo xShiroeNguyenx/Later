@@ -70,23 +70,50 @@ than from this list again.
 
 ## Tagging
 
+Two things must line up before you tag, and CI checks both rather than trusting
+them:
+
+- `package.json` `"version"` equals the tag without its `v`.
+- `CHANGELOG.md` has a section for that version. The release notes are taken from
+  it, so a missing or empty section fails the release instead of publishing one
+  with nothing in it.
+
 ```bash
 # 1. Bump the version and land the changelog entry
 #    - package.json  "version"
 #    - CHANGELOG.md  move Unreleased → the new version, dated
+node scripts/changelog-section.mjs v0.1.0   # preview the notes CI will use
 git add -A
 git commit -m "Release v0.1.0"
+git push
 
-# 2. Tag and push
+# 2. Tag and push the tag
 git tag -a v0.1.0 -m "Later. v0.1.0"
-git push origin main
 git push origin v0.1.0
 ```
 
-Pushing `main` deploys. The tag is what people can point at.
+Pushing `main` builds, checks and deploys. Pushing the **tag** runs the same build
+and end-to-end checks again and then creates the GitHub release — notes from
+`CHANGELOG.md`, plus a `later-v0.1.0-static.zip` of the built site for anyone who
+wants to host it themselves.
 
-Then create the GitHub release from the tag, pasting that version's section of
-`CHANGELOG.md` as the body.
+> The tag has to be pushed as its own `git push origin <tag>`. A workflow filtered
+> on `branches` alone never runs for a tag, which is why `on.push.tags` is listed
+> explicitly in the workflow.
+
+### If a tag was pushed before the release job existed
+
+Nothing ran, so nothing needs undoing beyond moving the tag:
+
+```bash
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
+git tag -a v0.1.0 -m "Later. v0.1.0"
+git push origin v0.1.0
+```
+
+Safe as long as no release was ever published from it and nobody has pulled it.
+Otherwise, leave it alone and cut the next version instead.
 
 ## When to call it 1.0.0
 

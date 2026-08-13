@@ -1,8 +1,11 @@
-name: Deploy to GitHub Pages
+name: Build, deploy and release
 
 on:
   push:
     branches: [main]
+    # Tags need listing explicitly. A workflow filtered only on `branches` does
+    # not run for a tag push at all — pushing v0.1.0 would silently do nothing.
+    tags: ['v*.*.*']
   # So a broken build on a branch is caught before it reaches Pages.
   pull_request:
     branches: [main]
@@ -58,8 +61,10 @@ jobs:
           BASE_PATH: ${{ steps.base.outputs.path }}
         run: npm run check-base
 
+      # Skipped for tags too — nothing would consume it, since deploy only runs
+      # for branch pushes.
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
         with:
           path: dist
 
@@ -111,7 +116,9 @@ jobs:
 
   deploy:
     needs: [build, e2e]
-    if: github.event_name != 'pull_request'
+    # Branch pushes and manual runs only. A tag points at a commit that main has
+    # already published, so deploying again would just repeat the same upload.
+    if: github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -127,3 +134,71 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  # Turns a pushed tag into an actual GitHub release. Gated on build and e2e, so a
+  # tag that does not pass its own checks never becomes a release.
+  release:
+    needs: [build, e2e]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+        env:
+          FFMPEG_BIN: /bin/true
+
+      # The tag must match what package.json claims, or the release is mislabelled.
+      - name: Check the tag against package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "Tag v$tag does not match package.json version $pkg." >&2
+            exit 1
+          fi
+          echo "Releasing $tag"
+
+      # Fails the release if that version has no changelog entry, rather than
+      # publishing one with empty notes.
+      - name: Take the release notes from CHANGELOG.md
+        run: node scripts/changelog-section.mjs "$GITHUB_REF_NAME" > release-notes.md
+
+      # A self-hostable copy of the site. Built at the root, which is what you want
+      # when serving it from your own domain rather than from /Later/.
+      - name: Build a portable copy
+        run: npm run build
+        env:
+          BASE_PATH: /
+
+      # zip is present on the ubuntu runners, but falling back to tar costs three
+      # lines and means a missing tool can never be the reason a release does not
+      # appear.
+      - name: Package it
+        id: pkg
+        run: |
+          name="later-${GITHUB_REF_NAME}-static"
+          if command -v zip >/dev/null 2>&1; then
+            (cd dist && zip -qr "../$name.zip" .)
+            echo "file=$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$name.tar.gz" -C dist .
+            echo "file=$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Later. $GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            "${{ steps.pkg.outputs.file }}#Static site (serve from a domain root)"
