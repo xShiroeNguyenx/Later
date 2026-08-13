@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Later.</title>
+<meta name="description" content="A tiny app for nights when your mind won't stop." />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#05070b" />
+<link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Later." />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<script>
+/*
+ * Language, decided before the body is parsed.
+ *
+ * It has to happen this early: the shell below ships both languages as sibling
+ * spans and CSS hides the wrong one, so by the time anything paints the choice is
+ * already made. Doing it after the shell rendered would flash English at a
+ * Vietnamese reader.
+ */
+(function () {
+  var l = 'en'
+  try {
+    var p = JSON.parse(localStorage.getItem('later.prefs.v1') || 'null')
+    if (p && (p.lang === 'en' || p.lang === 'vi')) l = p.lang
+    else {
+      var nav = ((navigator.languages && navigator.languages[0]) || navigator.language || '')
+      if (nav.toLowerCase().indexOf('vi') === 0) l = 'vi'
+    }
+  } catch (e) {}
+  document.documentElement.lang = l
+  window.__laterLang = l
+})()
+</script>
+
+<!--
+  Every style the app owns lives here, inline. It is ~3 KB gzipped, which is
+  cheaper than a stylesheet request and — more to the point — means there is no
+  render-blocking CSS and no flash of unstyled text at 2 AM. There is no
+  separate .css file to keep in sync; this is the whole design system.
+-->
+<style>
+  :root {
+    --bg:        #05070b;
+    --bg-deep:   #000205;
+    --ink:       rgba(255, 242, 228, .62);
+    --ink-dim:   rgba(255, 242, 228, .28);
+    --ink-faint: rgba(255, 242, 228, .13);
+    --accent:    rgba(255, 198, 150, .40);
+    --moon:      rgba(255, 208, 164, .78);
+    --ease:      cubic-bezier(.4, 0, .2, 1);
+    --slow:      900ms;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    overflow: hidden;
+  }
+
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  /* The boot shell carries both languages; the head script has already set
+     html[lang], so only one of each pair was ever painted. */
+  html[lang="vi"] [data-en], html:not([lang="vi"]) [data-vi] { display: none; }
+
+  /* ── screen scaffold ─────────────────────────────────────────────────── */
+
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top) + 2rem) 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
+    text-align: center;
+    transition: opacity var(--slow) var(--ease), background-color 2.4s var(--ease);
+  }
+
+  .clock {
+    position: absolute; top: calc(env(safe-area-inset-top) + 1.6rem);
+    font-size: .8rem; letter-spacing: .16em; color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A crescent, not an emoji — emoji render bright and differ per platform. */
+  .moon {
+    width: 34px; height: 34px; border-radius: 50%;
+    box-shadow: inset -9px 3px 0 0 var(--moon);
+    filter: drop-shadow(0 0 20px rgba(255, 190, 140, .2));
+  }
+
+  .lede {
+    margin-top: 2.6rem;
+    max-width: 19ch;
+    font-size: clamp(1.06rem, 4.7vw, 1.24rem);
+    font-weight: 400; line-height: 1.75; letter-spacing: .005em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .rest {
+    margin-top: 3.4rem;
+    min-width: min(62vw, 232px);
+    padding: 1.15rem 2rem;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    background: rgba(255, 198, 150, .045);
+    letter-spacing: .2em; text-transform: lowercase; font-size: .94rem;
+    color: rgba(255, 242, 228, .76);
+    transition: transform 420ms var(--ease), background-color 420ms var(--ease);
+  }
+  .rest:active, html[data-pressed] .rest { transform: scale(.965); background: rgba(255, 198, 150, .1); }
+
+  .foot {
+    position: absolute; bottom: calc(env(safe-area-inset-bottom) + 1.7rem);
+    display: flex; flex-direction: column; align-items: center; gap: 1.15rem;
+  }
+  .rule { width: 116px; height: 1px; background: var(--ink-faint); }
+  .summary {
+    font-size: .82rem; letter-spacing: .11em; color: var(--ink-dim);
+    padding: .35rem .6rem;
+  }
+  .tiny {
+    font-size: .74rem; letter-spacing: .1em; color: var(--ink-faint);
+    padding: .3rem .5rem;
+  }
+
+  /* ── session ─────────────────────────────────────────────────────────── */
+
+  .session { background: var(--bg-deep); }
+  .session .stage {
+    flex: 1; width: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3.2rem;
+  }
+
+  /* Everything fades away on its own after a few seconds of not being touched.
+     The app gets out of the way without the user having to do anything. */
+  .session[data-dim="1"] { opacity: .12; }
+
+  .orb {
+    width: min(46vw, 178px); aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 205, 160, .2), rgba(255, 205, 160, .04) 58%, transparent 72%);
+    animation: breathe var(--cycle, 10s) var(--ease) infinite;
+    will-change: transform;
+  }
+  @keyframes breathe {
+    0%   { transform: scale(.72); }
+    40%  { transform: scale(1);   }   /* 4s in  */
+    100% { transform: scale(.72); }   /* 6s out */
+  }
+
+  /* Rain mode gets a single dim point of light rather than a breathing guide. */
+  .glim {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255, 205, 160, .5);
+    filter: blur(1px);
+    animation: glim 7s ease-in-out infinite;
+  }
+  @keyframes glim { 0%, 100% { opacity: .28; } 50% { opacity: .62; } }
+
+  .cue {
+    max-width: 24ch; min-height: 5.2em;
+    font-size: clamp(1.02rem, 4.5vw, 1.2rem); line-height: 1.8;
+    color: var(--ink);
+    opacity: 0; transition: opacity 2600ms var(--ease);
+    text-wrap: balance;
+  }
+  .cue[data-on="1"] { opacity: 1; }
+
+  .controls {
+    display: flex; align-items: center; gap: .3rem;
+    opacity: 1; transition: opacity 700ms var(--ease);
+  }
+  .session[data-dim="1"] .controls { opacity: 0; pointer-events: none; }
+  .ctrl {
+    padding: .6rem .82rem;
+    font-size: .76rem; letter-spacing: .1em; color: var(--ink-dim);
+  }
+  .ctrl:active { color: var(--ink); }
+  .sep { width: 1px; height: 12px; background: var(--ink-faint); }
+
+  /* ── sheets (picker, park) ───────────────────────────────────────────── */
+
+  .backdrop {
+    position: fixed; inset: 0; z-index: 10;
+    background: rgba(0, 2, 5, .82);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: fadein 420ms var(--ease);
+  }
+  @keyframes fadein { from { opacity: 0; } }
+
+  .sheet {
+    width: 100%; max-width: 460px;
+    padding: 2rem 1.6rem calc(env(safe-area-inset-bottom) + 2rem);
+    background: #080b11;
+    border-top: 1px solid var(--ink-faint);
+    border-radius: 22px 22px 0 0;
+    animation: rise 520ms var(--ease);
+  }
+  @keyframes rise { from { transform: translateY(14px); opacity: .4; } }
+
+  .sheet h2 {
+    font-size: .96rem; font-weight: 400; letter-spacing: .04em;
+    color: var(--ink); margin-bottom: 1.5rem; text-align: center;
+  }
+
+  .field { margin-bottom: 1.5rem; }
+  .field > span {
+    display: block; margin-bottom: .6rem;
+    font-size: .68rem; letter-spacing: .19em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .opts { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .opt {
+    padding: .58rem .92rem;
+    border: 1px solid var(--ink-faint); border-radius: 999px;
+    font-size: .82rem; letter-spacing: .04em; color: var(--ink-dim);
+    transition: color 320ms var(--ease), border-color 320ms var(--ease), background-color 320ms var(--ease);
+  }
+  .opt[aria-checked="true"] {
+    color: rgba(255, 242, 228, .82);
+    border-color: var(--accent);
+    background: rgba(255, 198, 150, .07);
+  }
+  .opt:disabled { opacity: .35; cursor: default; }
+
+  .input {
+    width: 100%; padding: .95rem 1rem;
+    background: rgba(255, 242, 228, .035);
+    border: 1px solid var(--ink-faint); border-radius: 12px;
+    color: var(--ink); font-size: 1rem; letter-spacing: .01em;
+    outline: none;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--ink-faint); }
+
+  .primary {
+    display: block; width: 100%; margin-top: 1.2rem;
+    padding: 1rem;
+    border: 1px solid var(--accent); border-radius: 999px;
+    background: rgba(255, 198, 150, .05);
+    letter-spacing: .16em; text-transform: lowercase; font-size: .88rem;
+    color: rgba(255, 242, 228, .76);
+  }
+  .primary:disabled { opacity: .3; }
+  .quiet {
+    display: block; width: 100%; margin-top: .5rem; padding: .8rem;
+    font-size: .76rem; letter-spacing: .12em; color: var(--ink-faint);
+  }
+
+  .said {
+    padding: 1.4rem .5rem 1rem;
+    font-size: 1rem; line-height: 1.85; color: var(--ink);
+    text-align: center; text-wrap: balance;
+    animation: fadein 900ms var(--ease);
+  }
+
+  /* ── parked thoughts (daytime only) ──────────────────────────────────── */
+
+  .thoughts { list-style: none; display: flex; flex-direction: column; gap: .2rem; }
+  .thought {
+    display: flex; align-items: center; gap: .9rem;
+    padding: .85rem .2rem;
+    border-bottom: 1px solid rgba(255, 242, 228, .06);
+    text-align: left;
+  }
+  .thought span { flex: 1; font-size: .94rem; color: var(--ink); }
+  .thought time { font-size: .68rem; letter-spacing: .08em; color: var(--ink-faint); }
+  .thought button { padding: .3rem .55rem; color: var(--ink-faint); font-size: .95rem; }
+  .empty { text-align: center; color: var(--ink-faint); font-size: .86rem; padding: 1.5rem 0; }
+
+  /* ── accessibility ───────────────────────────────────────────────────── */
+
+  :focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* The orb still marks the rhythm, it just pulses instead of scaling. */
+    .orb { animation: breathe-still var(--cycle, 10s) var(--ease) infinite; }
+    @keyframes breathe-still { 0% { opacity: .45; } 40% { opacity: 1; } 100% { opacity: .45; } }
+    .backdrop, .sheet, .said { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  The boot shell. Identical markup to the React Home screen, so swapping it out
+  after hydration is invisible. It exists so the Rest button is on screen — and
+  actually working — before the bundle has arrived.
+-->
+<div id="boot" class="screen">
+  <span class="clock" id="boot-clock"></span>
+  <span class="moon" aria-hidden="true"></span>
+  <h1 class="lede" id="boot-lede"><span data-en>You don't have to figure it out tonight.</span><span data-vi>Tối nay chưa cần tìm ra câu trả lời.</span></h1>
+  <button class="rest" id="boot-rest" type="button"><span data-en>Rest</span><span data-vi>Nghỉ</span></button>
+  <div class="foot">
+    <span class="rule"></span>
+    <span class="summary" id="boot-summary"><span data-en>Rain · 20 min</span><span data-vi>Mưa · 20 phút</span></span>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script>
+/*
+ * Runs before the bundle. Three jobs, all of which have to happen on the very
+ * first frame: show the real time, show the returning-user wording, and — most
+ * importantly — make a tap on Rest actually start the sound. Autoplay rules
+ * only grant permission inside the gesture itself, so if we waited for React we
+ * would lose it and the user would tap into silence.
+ */
+(function () {
+  var d = document, h = d.documentElement
+  var lang = window.__laterLang === 'vi' ? 'vi' : 'en'
+  var FILES = { rain: 'rain-base', window: 'window-rain', night: 'night-ambience' }
+  // Only the two lines a returning visitor sees; everything else is in src/i18n.ts.
+  var S = {
+    en: { back: 'Welcome back', again: 'Rest again' },
+    vi: { back: 'Chào bạn quay lại', again: 'Nghỉ tiếp' }
+  }[lang]
+  var prefs = null
+
+  try { prefs = JSON.parse(localStorage.getItem('later.prefs.v1') || 'null') } catch (e) { prefs = null }
+
+  // Vietnamese reads a 24-hour clock; English gets a meridiem. Same two rules as
+  // formatClock() in src/lib/clock.ts.
+  var now = new Date(), hh = now.getHours(), mm = ('0' + now.getMinutes()).slice(-2)
+  var clock = lang === 'vi' ? hh + ':' + mm : (hh % 12 || 12) + ':' + mm + ' ' + (hh < 12 ? 'AM' : 'PM')
+  d.getElementById('boot-clock').textContent = clock
+
+  if (prefs) {
+    d.getElementById('boot-lede').textContent = S.back
+    d.getElementById('boot-rest').textContent = S.again
+    d.getElementById('boot-summary').textContent = prefs.label || ''
+  }
+
+  // Empty Mind is silent whatever sound was chosen before it.
+  var sound = 'rain'
+  if (prefs) sound = prefs.mode === 'empty' ? 'none' : prefs.sound
+  d.getElementById('boot-rest').addEventListener('click', function () {
+    window.__laterRest = 1
+    h.dataset.pressed = ''
+    if (!FILES[sound]) return
+    try {
+      var el = window.__laterBed
+      if (!el) {
+        el = new Audio('%BASE_URL%audio/' + FILES[sound] + '.m4a')
+        el.loop = true
+        el.preload = 'auto'
+        window.__laterBed = el
+        window.__laterBedSound = sound
+      }
+      var p = el.play()
+      if (p && p.catch) p.catch(function () {})
+    } catch (e) { /* no sound this time; the session still runs */ }
+  })
+})()
+</script>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
