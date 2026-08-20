@@ -5,8 +5,28 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Nothing yet. The next thing to happen is not a feature — it is the physical-device
-testing listed in [docs/RELEASE.md](docs/RELEASE.md).
+An overthinking mind is rarely stuck on one thought — it is juggling ten. Rain
+plus thought-parking helps with one; these give the body something to do instead.
+
+### Added
+
+- **Breathe mode.** The breathing orb with the words *breathe in / breathe out*
+  locked to its motion (driven by the animation's own events, so they can never
+  drift apart), framed around letting the body rest rather than trying to force
+  sleep. The exhale stays longer than the inhale, as everywhere else in the app.
+- **Let go mode** (*thiền buông thư*). A slow body scan — forehead, jaw,
+  shoulders, arms, breath, legs — one physical instruction at a time, gaps
+  widening as it goes, then silence. Never a word about the thoughts themselves.
+- **Soft music** (*nhạc êm*), a fourth soundscape: a warm pad of two chords
+  drifting into each other on a seamless 48-second loop, with sparse far-away
+  pentatonic notes living in the Web Audio texture layer so they stay random
+  forever instead of repeating with the loop. Synthesised from scratch like
+  everything else — every partial is quantised to a whole number of cycles per
+  loop, so the seam cannot click, and the authored lull the iOS ending depends
+  on measures −7.9 dB / −9.2 dB either side of the seam.
+
+The next thing to happen before 1.0 is still not a feature — it is the
+physical-device testing listed in [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [0.1.0] — 2026-08-13
 

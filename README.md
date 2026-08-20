@@ -38,7 +38,7 @@ npm run dev -- --host      # --host so you can open it on a real phone over LAN
 npm run build              # typecheck + production build into dist/
 npm run preview            # serve dist/ — needed to test the service worker
 npm run size               # bundle budget check
-npm run test:e2e           # 80 end-to-end checks in a real browser
+npm run test:e2e           # 86 end-to-end checks in a real browser
 npm run assets             # regenerate audio + icons (rarely needed)
 ```
 
@@ -163,6 +163,13 @@ the part that actually engages the parasympathetic side; an even rhythm looks th
 same and does considerably less. (4-7-8 was tried and dropped: holding for seven
 seconds is unpleasant if you have never practised it, and can make an anxious
 person more anxious.)
+
+**The guided modes instruct the body, never the mind.** Breathe and Let go are
+the two modes that ask for anything at all, and every line is a single physical
+instruction — unclench your jaw, let the shoulders sink. An overthinking mind is
+juggling ten things at once; one physical instruction displaces them without
+becoming another item on the list. In Breathe mode the in/out words are driven
+by the orb animation's own events, so word and motion cannot drift apart.
 
 **Empty Mind is empty visually too** — no orb, no motion, no sound, and a stretch
 of three minutes with nothing on screen at all. Without that it is just "Calm
@@ -318,7 +325,7 @@ docs/
   RELEASE.md          release checklist, including the device tests that gate it
 scripts/
   dsp.mjs             filters, noise, the seamless-loop trick, WAV writer
-  gen-audio.mjs       synthesises the three beds and two thunder one-shots
+  gen-audio.mjs       synthesises the four beds and two thunder one-shots
   gen-icons.mjs       PNG encoder + crescent artwork
   size.mjs            bundle budget check
   check-base.mjs      proves a build is consistent with the base it was given

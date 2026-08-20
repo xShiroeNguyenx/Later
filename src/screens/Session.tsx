@@ -47,7 +47,10 @@ export function Session({ cfg, onExit, onPark, covered }: Props) {
     <div className="screen session" data-dim={idle ? '1' : '0'}>
       <div className="stage">
         {cfg.mode === 'calm' && <Breath cycle={s.cycle} />}
-        {cfg.mode === 'rain' && <span className="glim" aria-hidden="true" />}
+        {cfg.mode === 'breath' && <Breath cycle={s.cycle} guided />}
+        {/* Let go gets the same still point of light as rain: an orb would
+            invite breath-pacing, and a body scan is done with the eyes closed. */}
+        {(cfg.mode === 'rain' || cfg.mode === 'release') && <span className="glim" aria-hidden="true" />}
         <p className="cue" data-on={cue ? '1' : '0'} aria-live="polite">
           {shown}
         </p>

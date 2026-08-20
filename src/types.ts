@@ -1,9 +1,9 @@
 import type { Lang } from './i18n'
 
-export type Mode = 'calm' | 'rain' | 'empty'
+export type Mode = 'calm' | 'breath' | 'release' | 'rain' | 'empty'
 
 /** `none` is a real choice, not an absence — Empty Mind depends on it. */
-export type SoundId = 'rain' | 'window' | 'night' | 'none'
+export type SoundId = 'rain' | 'window' | 'night' | 'drift' | 'none'
 
 /** What actually gets stored. The label is derived, so it lives separately. */
 export type Draft = {

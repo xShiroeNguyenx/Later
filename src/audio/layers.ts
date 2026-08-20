@@ -24,6 +24,8 @@ export type TextureSpec = {
   shimmer?: { hp: number; lp: number; gain: number }
   /** Single crickets, wandering out of step with the ones baked into the bed. */
   chirps?: { rate: number; freq: number; gain: number }
+  /** Far-apart single notes over the pad — a music box heard from another room. */
+  tones?: { rate: number; notes: number[]; gain: number }
   /** Distant thunder, from file. */
   thunder?: { gap: [number, number]; gain: number }
 }
@@ -51,6 +53,14 @@ export const BEDS: Record<Exclude<SoundId, 'none'>, Bed> = {
     texture: {
       chirps: { rate: 0.42, freq: 4550, gain: 0.035 },
       shimmer: { hp: 5000, lp: 10000, gain: 0.012 },
+    },
+  },
+  drift: {
+    file: `${BASE}audio/drift.m4a`,
+    texture: {
+      // A-minor pentatonic, an octave-and-more above the pad, ~7–19s apart.
+      tones: { rate: 0.09, notes: [440, 523.25, 587.33, 659.25, 783.99], gain: 0.05 },
+      shimmer: { hp: 4500, lp: 9500, gain: 0.008 },
     },
   },
 }

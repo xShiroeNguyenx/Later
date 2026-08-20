@@ -90,7 +90,7 @@ function noiseBed(seed, chain) {
   return long.slice(2 * L)
 }
 
-// ── the three soundscapes ────────────────────────────────────────────────────
+// ── the four soundscapes ─────────────────────────────────────────────────────
 
 function rainBase() {
   const hiss = noiseBed(0x1a2b, (b) => {
@@ -186,6 +186,75 @@ function nightAmbience() {
   return normalise(bed, 0.075)
 }
 
+/**
+ * Soft music: a warm pad of two chords a half-loop crossfade apart — Am7 at the
+ * seam, Fmaj7 mid-loop. They share three tones (A, C, E), so the change reads
+ * as light shifting rather than a progression to follow; following is the
+ * opposite of what this app is for.
+ *
+ * Every partial is quantised to a whole number of cycles per loop, so the
+ * tonal layer is exactly periodic by construction and the seam cannot click.
+ * The sparse melodic notes live in the Web Audio texture layer (see
+ * src/audio/layers.ts), where they can be random forever instead of repeating
+ * every 48 seconds.
+ */
+function softChords() {
+  const rand = rng(0xc0de)
+  const quant = (f) => Math.max(1, Math.round(f * LOOP)) / LOOP
+
+  // [freq, gain]: A2 E3 G3 C4, then F2 C3 E3 A3.
+  const CHORDS = [
+    [[110.0, 1], [164.81, 0.8], [196.0, 0.62], [261.63, 0.4]],
+    [[87.31, 1], [130.81, 0.8], [164.81, 0.62], [220.0, 0.42]],
+  ]
+
+  const tonal = new Float32Array(L)
+  CHORDS.forEach((chord, ci) => {
+    for (const [f0, g0] of chord) {
+      // Each note: a detuned pair for width, plus quiet 2nd and 3rd harmonics
+      // so the lowpass below leaves some warmth rather than a pure-sine organ.
+      for (const [mult, mix] of [[0.9985, 0.5], [1.0015, 0.5], [2, 0.22], [3, 0.05]]) {
+        const f = quant(f0 * mult)
+        const phase = rand() * 2 * Math.PI
+        // A slow whole-cycle amplitude wobble so no voice ever sits still.
+        const wobCycles = 1 + Math.floor(rand() * 3)
+        const wobPhase = rand() * 2 * Math.PI
+        const wobDepth = 0.15 + rand() * 0.2
+        const w = (2 * Math.PI * f) / SR
+        for (let i = 0; i < L; i++) {
+          const x = i / L
+          // Chord A full at the seam, chord B full mid-loop — both periodic.
+          const fade = 0.5 + (ci === 0 ? 0.5 : -0.5) * Math.cos(2 * Math.PI * x)
+          const wob = 1 + wobDepth * Math.sin(2 * Math.PI * wobCycles * x + wobPhase)
+          tonal[i] += Math.sin(w * i + phase) * g0 * mix * fade * wob
+        }
+      }
+    }
+  })
+
+  // Filters settle over two throwaway periods, exactly as noiseBed does.
+  const long = tile(tonal, 3)
+  lowpass(long, 1600)
+  highpass(long, 55)
+  const pad = long.slice(2 * L)
+
+  // A faint high bed of air, or headphones make the pad feel like a sealed room.
+  const air = noiseBed(0xa11e, (b) => {
+    highpass(b, 2600); lowpass(b, 7600)
+  })
+
+  const bed = new Float32Array(L)
+  mixInto(bed, pad, 1)
+  mixInto(bed, air, 0.012)
+
+  // One slow swell per loop, phased so the seam falls in its trough.
+  const g = periodicLfo(L, 1, -0.25)
+  shape(bed, (_, i) => 1 + 0.12 * g[i])
+
+  seamDip(bed, SEAM_DEPTH, SEAM_WIDTH)
+  return normalise(bed, 0.085)
+}
+
 /** Distant thunder — a swell, not a crack. One-shot, so no loop constraint. */
 function thunder(seed, seconds) {
   const rand = rng(seed)
@@ -246,6 +315,7 @@ console.log(`Generating audio (${LOOP}s seamless loops, mono AAC)…`)
 encode('rain-base', rainBase(), 64)
 encode('window-rain', windowRain(), 64)
 encode('night-ambience', nightAmbience(), 64)
+encode('drift', softChords(), 64)
 encode('thunder-1', thunder(0x8a91, 7.0), 48)
 encode('thunder-2', thunder(0xa2b3, 5.5), 48)
 console.log('Done.')

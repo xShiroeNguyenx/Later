@@ -9,8 +9,12 @@ import type { Mode } from '../types'
  * out, so anything under ~9s barely registers. Windows never overlap: a gap of
  * pure darkness between lines is what keeps it from feeling like a slideshow.
  *
- * Nothing here reassures anyone that things will be fine or asks them to do
- * anything. The only claim being made is that tonight is not when it gets solved.
+ * Nothing here reassures anyone that things will be fine or asks them to solve
+ * anything. The guided modes (Breathe, Let go) do give instructions — but only
+ * ever one at a time, always about the body, never about the thoughts. An
+ * overthinking mind is juggling ten things at once; a single physical
+ * instruction is the one kind of sentence that displaces them without becoming
+ * another item on the list.
  */
 export type CueKey =
   | 'noFiguringOut'
@@ -24,6 +28,21 @@ export type CueKey =
   | 'notTonight'
   | 'stillHere'
   | 'goodNight'
+  // Breathe
+  | 'restNotSleep'
+  | 'orbPace'
+  | 'longerOut'
+  | 'bodyKnows'
+  // Let go
+  | 'settleIn'
+  | 'softenFace'
+  | 'unclenchJaw'
+  | 'dropShoulders'
+  | 'heavyArms'
+  | 'softBelly'
+  | 'heavyLegs'
+  | 'heldByBed'
+  | 'restIsEnough'
 
 export type Cue = { at: number; hold: number; key: CueKey }
 
@@ -43,6 +62,36 @@ export const SCRIPTS: Record<Mode, Script> = {
       { at: 104, hold: 13, key: 'breatheSlower' },
       { at: 180, hold: 13, key: 'nothingToSolve' },
       { at: 300, hold: 13, key: 'itCanWait' },
+    ],
+    end: GOOD_NIGHT,
+  },
+
+  // The orb does the talking (its in/out labels live in Breath.tsx, locked to
+  // the animation). These lines only set the frame: rest, not sleep.
+  breath: {
+    cues: [
+      { at: 12, hold: 12, key: 'restNotSleep' },
+      { at: 40, hold: 12, key: 'orbPace' },
+      { at: 92, hold: 12, key: 'longerOut' },
+      { at: 170, hold: 13, key: 'bodyKnows' },
+      { at: 300, hold: 13, key: 'itCanWait' },
+    ],
+    end: GOOD_NIGHT,
+  },
+
+  // A body scan, top to bottom, one part at a time — thiền buông thư. The gaps
+  // widen as it goes: by the legs, most people are no longer reading.
+  release: {
+    cues: [
+      { at: 14, hold: 13, key: 'settleIn' },
+      { at: 48, hold: 13, key: 'softenFace' },
+      { at: 86, hold: 13, key: 'unclenchJaw' },
+      { at: 126, hold: 13, key: 'dropShoulders' },
+      { at: 168, hold: 13, key: 'heavyArms' },
+      { at: 214, hold: 13, key: 'softBelly' },
+      { at: 262, hold: 13, key: 'heavyLegs' },
+      { at: 314, hold: 14, key: 'heldByBed' },
+      { at: 420, hold: 14, key: 'restIsEnough' },
     ],
     end: GOOD_NIGHT,
   },

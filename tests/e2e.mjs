@@ -147,7 +147,7 @@ await page.locator('.opt', { hasText: 'Empty Mind' }).click()
 await page.waitForTimeout(250)
 const soundOpts = page.locator('.field').first().locator('.opt')
 const disabledCount = await soundOpts.evaluateAll((els) => els.filter((e) => e.disabled).length)
-ok('Empty Mind disables all sounds', disabledCount === 4, `${disabledCount}/4 disabled`)
+ok('Empty Mind disables all sounds', disabledCount === 5, `${disabledCount}/5 disabled`)
 ok('summary reflects Empty Mind', (await page.locator('button.summary').count()) === 0 || true)
 
 // Back to Calm + Rain, 10 min so the run is short.
@@ -313,6 +313,46 @@ ok('rain-only shows a glimmer, not an orb',
 ok('rain-only loads the window-rain bed',
   (await ro.evaluate(() => window.__laterBed?.getAttribute('src'))) === '/audio/window-rain.m4a')
 await ro.screenshot({ path: `${OUT}/11-rain-only.png` })
+
+// ── breathe mode ─────────────────────────────────────────────────────────────
+// The in/out label must exist, start on the in-breath, and turn over where the
+// keyframes put the turn (40% of a 10s cycle).
+const br = await ctx.newPage()
+await br.addInitScript(() => {
+  localStorage.setItem('later.prefs.v1',
+    JSON.stringify({ mode: 'breath', sound: 'drift', minutes: 10, label: 'Soft music · 10 min · breathing' }))
+})
+await br.goto(BASE, { waitUntil: 'load' })
+await br.waitForTimeout(500)
+await br.locator('button.rest').click()
+await br.waitForTimeout(1200)
+ok('breathe: orb with a phase label',
+  (await br.locator('.orb').count()) === 1 && (await br.locator('.phase').count()) === 1)
+ok('breathe: phase starts on the in-breath',
+  (await br.locator('.phase').innerText()).trim() === 'breathe in')
+ok('breathe: loads the drift bed',
+  (await br.evaluate(() => window.__laterBed?.getAttribute('src'))) === '/audio/drift.m4a')
+await br.waitForTimeout(4000) // t ≈ 5.5s of a 10s cycle: past the 4s turn, before the next cycle
+ok('breathe: phase turns over to the out-breath',
+  (await br.locator('.phase').innerText()).trim() === 'breathe out')
+await br.screenshot({ path: `${OUT}/22-breathe.png` })
+
+// ── let-go mode (body scan) ──────────────────────────────────────────────────
+const lg = await ctx.newPage()
+await lg.addInitScript(() => {
+  localStorage.setItem('later.prefs.v1',
+    JSON.stringify({ mode: 'release', sound: 'night', minutes: 20, label: 'Night · 20 min · letting go' }))
+})
+await lg.goto(BASE, { waitUntil: 'load' })
+await lg.waitForTimeout(500)
+await lg.locator('button.rest').click()
+await lg.waitForTimeout(1200)
+ok('let go: a glimmer, no orb',
+  (await lg.locator('.glim').count()) === 1 && (await lg.locator('.orb').count()) === 0)
+await lg.waitForTimeout(14_000) // first body-scan line arrives at t=14
+ok('let go: first body-scan cue',
+  (await lg.locator('.cue').innerText()).includes('no right way'))
+await lg.screenshot({ path: `${OUT}/23-let-go.png` })
 
 // ── tap Rest before hydration ────────────────────────────────────────────────
 // A fresh context: a service worker from an earlier page would serve the bundle

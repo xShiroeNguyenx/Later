@@ -24,7 +24,7 @@ export function composeLabel(p: Draft): string {
   const time = t.minutes(p.minutes)
   if (p.mode === 'empty') return `${t.mode.empty} · ${time}`
   const sound = t.sound[effectiveSound(p)]
-  return p.mode === 'calm' ? `${sound} · ${time}` : `${sound} · ${time} · ${t.rainOnlySuffix}`
+  return p.mode === 'calm' ? `${sound} · ${time}` : `${sound} · ${time} · ${t.modeSuffix[p.mode]}`
 }
 
 /** Returns null on a first visit — the caller uses that to pick the wording. */

@@ -22,7 +22,8 @@ export type Strings = {
   // labels shared by the summary line and the picker
   sound: Record<SoundId, string>
   mode: Record<Mode, string>
-  rainOnlySuffix: string
+  /** The lowercase tail of the summary line, for every mode that names itself. */
+  modeSuffix: Record<Exclude<Mode, 'calm' | 'empty'>, string>
   minutes(m: number | null): string
 
   // picker
@@ -39,6 +40,10 @@ export type Strings = {
   ctrlResume: string
   ariaLess: string
   ariaMore: string
+
+  // the words locked to the breathing orb in Breathe mode
+  phaseIn: string
+  phaseOut: string
 
   // the words during a session
   cue: Record<CueKey, string>
@@ -72,9 +77,9 @@ const en: Strings = {
   parkCta: '+ park a thought',
   parkedLine: (n, when) => `You parked ${n} ${n === 1 ? 'thought' : 'thoughts'} ${when} →`,
 
-  sound: { rain: 'Rain', window: 'Window rain', night: 'Night', none: 'Silence' },
-  mode: { calm: 'Calm', rain: 'Rain only', empty: 'Empty Mind' },
-  rainOnlySuffix: 'rain only',
+  sound: { rain: 'Rain', window: 'Window rain', night: 'Night', drift: 'Soft music', none: 'Silence' },
+  mode: { calm: 'Calm', breath: 'Breathe', release: 'Let go', rain: 'Rain only', empty: 'Empty Mind' },
+  modeSuffix: { rain: 'rain only', breath: 'breathing', release: 'letting go' },
   minutes: (m) => (m === null ? 'until I stop' : `${m} min`),
 
   pickerTitle: 'Tonight',
@@ -90,6 +95,9 @@ const en: Strings = {
   ariaLess: 'five minutes less',
   ariaMore: 'five minutes more',
 
+  phaseIn: 'breathe in',
+  phaseOut: 'breathe out',
+
   cue: {
     noFiguringOut: "You don't have to figure anything out right now.",
     letSoundFill: 'Let the sound take up the space.',
@@ -102,6 +110,23 @@ const en: Strings = {
     notTonight: "You don't need to solve this tonight.",
     stillHere: "Still here. That's enough.",
     goodNight: 'Good night.',
+
+    // Breathe
+    restNotSleep: "Don't try to sleep. Just let your body rest.",
+    orbPace: 'Let the circle set the pace — no need to count.',
+    longerOut: 'Let each breath out run a little longer.',
+    bodyKnows: "The body settles on its own. You don't have to help.",
+
+    // Let go
+    settleIn: 'Settle in. There is no right way to do this.',
+    softenFace: 'Let your forehead soften… then your eyes.',
+    unclenchJaw: 'Unclench your jaw. Let your teeth part.',
+    dropShoulders: 'Your shoulders — let them sink into the bed.',
+    heavyArms: 'Your arms grow heavy, down to the fingertips.',
+    softBelly: 'Let the breath come and go on its own.',
+    heavyLegs: 'Your legs, heavy and warm. Your feet, letting go.',
+    heldByBed: 'The bed is holding you. Nothing needs holding up.',
+    restIsEnough: "You don't have to sleep. Resting is enough.",
   },
 
   parkTitle: "What's on your mind?",
@@ -140,9 +165,9 @@ const vi: Strings = {
   parkCta: '+ gác lại một suy nghĩ',
   parkedLine: (n, when) => `Bạn đã gác lại ${n} điều ${when} →`,
 
-  sound: { rain: 'Mưa', window: 'Mưa ngoài cửa sổ', night: 'Đêm', none: 'Im lặng' },
-  mode: { calm: 'Lắng lại', rain: 'Chỉ có mưa', empty: 'Trống không' },
-  rainOnlySuffix: 'chỉ mưa',
+  sound: { rain: 'Mưa', window: 'Mưa ngoài cửa sổ', night: 'Đêm', drift: 'Nhạc êm', none: 'Im lặng' },
+  mode: { calm: 'Lắng lại', breath: 'Hít thở', release: 'Buông thư', rain: 'Chỉ có mưa', empty: 'Trống không' },
+  modeSuffix: { rain: 'chỉ mưa', breath: 'hít thở', release: 'buông thư' },
   minutes: (m) => (m === null ? 'đến khi tôi dừng' : `${m} phút`),
 
   pickerTitle: 'Tối nay',
@@ -158,6 +183,9 @@ const vi: Strings = {
   ariaLess: 'bớt năm phút',
   ariaMore: 'thêm năm phút',
 
+  phaseIn: 'hít vào',
+  phaseOut: 'thở ra',
+
   cue: {
     noFiguringOut: 'Ngay lúc này bạn không cần hiểu ra điều gì cả.',
     letSoundFill: 'Cứ để âm thanh chiếm hết chỗ.',
@@ -170,6 +198,23 @@ const vi: Strings = {
     notTonight: 'Tối nay bạn không cần giải quyết chuyện này.',
     stillHere: 'Vẫn ở đây. Vậy là đủ.',
     goodNight: 'Ngủ ngon.',
+
+    // Hít thở
+    restNotSleep: 'Không cần cố ngủ. Chỉ cần để cơ thể được nghỉ.',
+    orbPace: 'Cứ để vòng sáng giữ nhịp — không cần đếm.',
+    longerOut: 'Mỗi hơi thở ra, để nó dài hơn một chút.',
+    bodyKnows: 'Cơ thể tự dịu xuống. Bạn không cần làm gì thêm.',
+
+    // Buông thư
+    settleIn: 'Nằm cho thật thoải mái. Không có cách nào là sai cả.',
+    softenFace: 'Thả lỏng vầng trán… rồi đến hai mắt.',
+    unclenchJaw: 'Buông lỏng quai hàm. Để răng hé ra.',
+    dropShoulders: 'Hai vai — cứ để chúng lún xuống giường.',
+    heavyArms: 'Hai cánh tay nặng dần, đến tận đầu ngón tay.',
+    softBelly: 'Để hơi thở tự đến, rồi tự đi.',
+    heavyLegs: 'Hai chân nặng và ấm. Bàn chân buông hẳn ra.',
+    heldByBed: 'Chiếc giường đang đỡ lấy bạn. Không cần gồng giữ gì nữa.',
+    restIsEnough: 'Không cần cố ngủ. Nghỉ được là đủ rồi.',
   },
 
   parkTitle: 'Bạn đang nghĩ gì?',

@@ -128,6 +128,27 @@ export function startTexture(ctx: AudioContext, dest: AudioNode, spec: TextureSp
     }
   }
 
+  // A soft felt-hammer note: slow attack, long decay, one quiet octave above.
+  // Sparse and randomly placed, so the musical layer never becomes a melody to
+  // follow — following is the opposite of what this app is for.
+  function tone(at: number) {
+    const s = spec.tones!
+    const f = s.notes[Math.floor(Math.random() * s.notes.length)]
+    const dur = rand(3.5, 6)
+    for (const [mult, mix] of [[1, 1], [2, 0.18]] as const) {
+      const osc = ctx.createOscillator()
+      osc.frequency.value = f * mult
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(s.gain * mix * rand(0.55, 1), at + 0.18)
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+      osc.connect(g).connect(out)
+      osc.start(at)
+      osc.stop(at + dur + 0.1)
+      osc.onended = () => { osc.disconnect(); g.disconnect() }
+    }
+  }
+
   function thunder(at: number) {
     const buf = thunderBuffers[Math.floor(Math.random() * thunderBuffers.length)]
     if (!buf) return
@@ -143,6 +164,7 @@ export function startTexture(ctx: AudioContext, dest: AudioNode, spec: TextureSp
   // Next scheduled time for each voice, in AudioContext time.
   let nextDrop = ctx.currentTime
   let nextChirp = ctx.currentTime + rand(1, 4)
+  let nextTone = ctx.currentTime + rand(3, 8)
   let nextThunder = ctx.currentTime + (spec.thunder ? rand(20, 50) : Infinity)
 
   if (spec.thunder) void loadThunder(ctx)
@@ -155,6 +177,7 @@ export function startTexture(ctx: AudioContext, dest: AudioNode, spec: TextureSp
       const now = ctx.currentTime
       nextDrop = Math.max(nextDrop, now)
       nextChirp = Math.max(nextChirp, now)
+      nextTone = Math.max(nextTone, now)
       nextThunder = Math.max(nextThunder, now)
       return
     }
@@ -169,6 +192,12 @@ export function startTexture(ctx: AudioContext, dest: AudioNode, spec: TextureSp
       while (nextChirp < until) {
         chirp(nextChirp)
         nextChirp += rand(0.5, 1.8) / spec.chirps.rate
+      }
+    }
+    if (spec.tones) {
+      while (nextTone < until) {
+        tone(nextTone)
+        nextTone += rand(0.6, 1.7) / spec.tones.rate
       }
     }
     if (spec.thunder) {

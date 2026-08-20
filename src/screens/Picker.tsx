@@ -31,6 +31,7 @@ export function Picker({ value, onChange, onClose }: Props) {
           { v: 'rain', label: t.sound.rain, disabled: silent },
           { v: 'window', label: t.sound.window, disabled: silent },
           { v: 'night', label: t.sound.night, disabled: silent },
+          { v: 'drift', label: t.sound.drift, disabled: silent },
           { v: 'none', label: t.sound.none, disabled: silent || value.mode === 'rain' },
         ]}
       />
@@ -41,6 +42,8 @@ export function Picker({ value, onChange, onClose }: Props) {
         onPick={(v) => setMode(v as Mode)}
         options={[
           { v: 'calm', label: t.mode.calm },
+          { v: 'breath', label: t.mode.breath },
+          { v: 'release', label: t.mode.release },
           { v: 'rain', label: t.mode.rain },
           { v: 'empty', label: t.mode.empty },
         ]}

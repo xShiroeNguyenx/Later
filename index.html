@@ -158,7 +158,16 @@
     100% { transform: scale(.72); }   /* 6s out */
   }
 
-  /* Rain mode gets a single dim point of light rather than a breathing guide. */
+  /* The in/out label under the orb in Breathe mode. A reserved line-height so
+     the words swapping never nudges the layout. */
+  .phase {
+    margin-top: -1.9rem;
+    min-height: 1.3em;
+    font-size: .8rem; letter-spacing: .28em; text-transform: lowercase;
+    color: var(--ink-dim);
+  }
+
+  /* Rain and Let go get a single dim point of light rather than a breathing guide. */
   .glim {
     width: 7px; height: 7px; border-radius: 50%;
     background: rgba(255, 205, 160, .5);
@@ -322,7 +331,7 @@
 (function () {
   var d = document, h = d.documentElement
   var lang = window.__laterLang === 'vi' ? 'vi' : 'en'
-  var FILES = { rain: 'rain-base', window: 'window-rain', night: 'night-ambience' }
+  var FILES = { rain: 'rain-base', window: 'window-rain', night: 'night-ambience', drift: 'drift' }
   // Only the two lines a returning visitor sees; everything else is in src/i18n.ts.
   var S = {
     en: { back: 'Welcome back', again: 'Rest again' },
