@@ -5,8 +5,14 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Nothing yet. The next thing to happen before 1.0 is still not a feature — it is
+the physical-device testing listed in [docs/RELEASE.md](docs/RELEASE.md).
+
+## [0.1.1] — 2026-08-20
+
 An overthinking mind is rarely stuck on one thought — it is juggling ten. Rain
-plus thought-parking helps with one; these give the body something to do instead.
+plus thought-parking helps with one; this release gives the body something to do
+instead.
 
 ### Added
 
@@ -25,8 +31,16 @@ plus thought-parking helps with one; these give the body something to do instead
   loop, so the seam cannot click, and the authored lull the iOS ending depends
   on measures −7.9 dB / −9.2 dB either side of the seam.
 
-The next thing to happen before 1.0 is still not a feature — it is the
-physical-device testing listed in [docs/RELEASE.md](docs/RELEASE.md).
+### Engineering notes
+
+- Six new end-to-end checks (86 total): the in/out label starts on the
+  in-breath and turns over at 40% of the cycle, the drift bed loads, and the
+  body scan shows a glimmer and its first cue on time.
+- App JavaScript is now 17.9 kB gzip against the same 60 kB budget. The three
+  existing beds regenerate byte-identical; `drift.m4a` is the only new asset
+  (387 KB, lazy-loaded and cached like the others).
+
+The device testing in [docs/RELEASE.md](docs/RELEASE.md) still gates 1.0.
 
 ## [0.1.0] — 2026-08-13
 
@@ -108,5 +122,6 @@ lock-screen playback is unverified on physical devices; on iOS a timer ends with
 ±24 s of the requested time because it waits for the lull; the texture layer stops
 when iOS backgrounds the app, by design.
 
-[Unreleased]: https://github.com/xShiroeNguyenx/Later/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/xShiroeNguyenx/Later/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/xShiroeNguyenx/Later/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/xShiroeNguyenx/Later/releases/tag/v0.1.0

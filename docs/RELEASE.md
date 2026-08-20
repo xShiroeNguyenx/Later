@@ -36,7 +36,7 @@ npm run build                    # typecheck + build
 npm run size                     # bundle budget — fails over 60 kB gzip of JS
 npm run check-base               # no root-absolute paths that would 404 on Pages
 npx playwright install chromium  # once
-npm run test:e2e                 # 80 checks, ~5 min; serves dist/ itself
+npm run test:e2e                 # 86 checks, ~5 min; serves dist/ itself
 ```
 
 The suite covers both endings (the software fade, and the loop-seam ending with
@@ -91,19 +91,19 @@ them:
 # 1. Bump the version and land the changelog entry
 #    - package.json  "version"
 #    - CHANGELOG.md  move Unreleased → the new version, dated
-node scripts/changelog-section.mjs v0.1.0   # preview the notes CI will use
+node scripts/changelog-section.mjs v0.1.1   # preview the notes CI will use
 git add -A
-git commit -m "Release v0.1.0"
+git commit -m "Release v0.1.1"
 git push
 
 # 2. Tag and push the tag
-git tag -a v0.1.0 -m "Later. v0.1.0"
-git push origin v0.1.0
+git tag -a v0.1.1 -m "Later. v0.1.1"
+git push origin v0.1.1
 ```
 
 Pushing `main` builds, checks and deploys. Pushing the **tag** runs the same build
 and end-to-end checks again and then creates the GitHub release — notes from
-`CHANGELOG.md`, plus a `later-v0.1.0-static.zip` of the built site for anyone who
+`CHANGELOG.md`, plus a `later-v0.1.1-static.zip` of the built site for anyone who
 wants to host it themselves.
 
 > The tag has to be pushed as its own `git push origin <tag>`. A workflow filtered
